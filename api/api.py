@@ -39,48 +39,55 @@ def api_tische():
 
     return jsonify(all_books)
 
+
 @app.route('/api/tische/free', methods=['GET'])
 def api_free_tables():
+    # example url: 127.0.0.1:5000/api/tische/free?zeitpunkt=2022-02-02%2018:30:00
+    # %20 for space
+
     query_parameters = request.args
     conn = sqlite3.connect('../buchungssystem.sqlite')
     conn.row_factory = dict_factory
     cur = conn.cursor()
 
-    argsDate = "2022-02-02 18:30:00"
     zeitpunkt = query_parameters.get('zeitpunkt')
 
-    query = f'SELECT t.tischnummer, t.anzahlPlaetze FROM tische t LEFT JOIN reservierungen r ON t.tischnummer = r.tischnummer AND r.zeitpunkt = \'{argsDate}\' AND r.storniert = "False" WHERE r.tischnummer IS NULL;'
+    query = '''SELECT t.tischnummer, t.anzahlPlaetze
+               FROM tische t LEFT JOIN reservierungen r
+               ON t.tischnummer = r.tischnummer
+               AND r.zeitpunkt = ?
+               AND r.storniert = "False"
+               WHERE r.tischnummer IS NULL;'''
 
-
-
-    free_tables= cur.execute(query).fetchall()
+    free_tables = cur.execute(query, (zeitpunkt,)).fetchall()
 
     return jsonify(free_tables)
 
 
-@app.route('/api/tische/freeN', methods=['GET'])
-def api_free_tablesN():
+# example of how to include multiple params that don't have to be in a specific order
+@app.route('/api/tische/free/UNKNOWN', methods=['GET'])
+def api_free_tables_multi_params():
+
     query_parameters = request.args
-
-    zeitpunkt = query_parameters.get('zeitpunkt')
-
-    query = f'SELECT t.tischnummer, t.anzahlPlaetze FROM tische t LEFT JOIN reservierungen r ON t.tischnummer = r.tischnummer AND r.zeitpunkt = ? AND r.storniert = "False" WHERE r.tischnummer IS NULL;'
-    to_filter = []
-
-    if zeitpunkt:
-        query += ' zeitpunkt=? AND'
-        to_filter.append(zeitpunkt)
-
-    query = query[:-4] + ';'
-
     conn = sqlite3.connect('../buchungssystem.sqlite')
     conn.row_factory = dict_factory
     cur = conn.cursor()
 
-    result= cur.execute(query, to_filter).fetchall()
+    zeitpunkt = query_parameters.get('zeitpunkt')
+    other_param = query_parameters.get('other_param')  # more params can be added here
 
-    return jsonify(result)
+    query = '''SELECT t.tischnummer, t.anzahlPlaetze
+               FROM tische t LEFT JOIN reservierungen r ON
+               t.tischnummer = r.tischnummer
+               AND r.zeitpunkt = :zeitpunkt
+               AND r.other_param = :other_param
+               AND r.storniert = "False"
+               WHERE r.tischnummer IS NULL;'''
 
+    params = {'zeitpunkt': zeitpunkt, 'other_param': other_param} # maps request args to their placeholder
+    free_tables = cur.execute(query, params).fetchall()
+
+    return jsonify(free_tables)
 
 
 @app.errorhandler(404)
