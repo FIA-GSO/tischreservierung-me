@@ -1,0 +1,25 @@
+@startuml
+actor Gast
+actor Reservierungssystem
+database Datenbank
+
+Gast -> Reservierungssystem: Verfügbare Tische für gewünschten Termin anzeigen
+activate Reservierungssystem
+Reservierungssystem --> Gast: Liste der verfügbaren Tische
+Gast -> Reservierungssystem: Tisch für gewünschten Termin reservieren
+Reservierungssystem -> Datenbank: Überprüfe Tischverfügbarkeit
+activate Datenbank
+Datenbank --> Reservierungssystem: Tischverfügbarkeit bestätigt
+deactivate Datenbank
+Reservierungssystem --> Gast: Bestätigung der Reservierung
+Gast -> Reservierungssystem: Reservierung ggf. stornieren
+Reservierungssystem -> Datenbank: Storniere Reservierung
+activate Datenbank
+Datenbank --> Reservierungssystem: Stornierung bestätigt
+deactivate Datenbank
+Reservierungssystem --> Gast: Bestätigung der Stornierung
+Gast -> Reservierungssystem: Logout
+
+deactivate Reservierungssystem
+
+@enduml
