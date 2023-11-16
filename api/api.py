@@ -37,28 +37,28 @@ def api_res():
     return jsonify(all_books)
 
 
-@app.route('/api/res/create', methods=['GET'])
+@app.route('/api/res/create', methods=['POST'])
 def api_res_create():
 
+    # example url: http://127.0.0.1:5000/api/res/pseudo?zeitpunkt=2022-02-02%2018:30:00&anzahlPlaetze=6
 
-    # example url: http://127.0.0.1:5000/api/res/create?zeitpunkt=2022-02-02%2018:30:00&anzahlPlaetze=6
-    # %20 for space
-
-    query_parameters = request.args
-
-    print(query_parameters)
     conn = sqlite3.connect('../buchungssystem.sqlite')
     conn.row_factory = dict_factory
     cur = conn.cursor()
 
-    zeitpunkt = query_parameters.get('zeitpunkt')
-    anzahlPlaetze = query_parameters.get('anzahlPlaetze')
+    jsonData = request.json
 
-    if query_parameters.keys() != {'zeitpunkt', 'anzahlPlaetze'}:
+    zeitpunkt = jsonData.get('zeitpunkt')
+    anzahl_plaetze = jsonData.get('anzahlPlaetze')
+
+    if jsonData.keys() != {'zeitpunkt', 'anzahlPlaetze'}:
         return jsonify({'error': 'Bad Request: Zeitpunkt and anzahlPlaetze are the only parameters allowed'}), 400
 
     if not datetime_valid(zeitpunkt):
         return jsonify({'error': 'Bad Request: Zeitpunkt parameter does not fullfill iso standart date'}), 400
+
+    # ---------------------------
+    # check free tables at selected date
 
     free = '''SELECT t.tischnummer, t.anzahlPlaetze
                    FROM tische t LEFT JOIN reservierungen r
@@ -67,22 +67,39 @@ def api_res_create():
                    AND r.storniert = "False"
                    WHERE r.tischnummer IS NULL;'''
 
-    params = {'zeitpunkt': zeitpunkt, 'anzahlPlaetze': anzahlPlaetze}
+    params = {'zeitpunkt': zeitpunkt, 'anzahlPlaetze': anzahl_plaetze}
 
     free_tables = cur.execute(free, params).fetchall()
 
     if not free_tables:
         return jsonify({'error': 'Conflict: There are no free tables at the selected time'}), 409
 
-    sorted_tables_by_anzahlplaetze = sorted(free_tables, key=lambda x: x['anzahlPlaetze'])
-    filtered_list = [entry for entry in sorted_tables_by_anzahlplaetze if entry['anzahlPlaetze'] >= int(anzahlPlaetze)]
-    if filtered_list:
-        print("Filtered list:")
-        print(filtered_list)
-        return (jsonify(filtered_list))
-    else:
-        return jsonify({'error': 'Conflict: There are free tables but not enough places'}), 409
+    # ---------------------------
 
+    # sorts asc b anzahlPlaetze
+    sorted_table_by_anzahlplaetze = sorted(free_tables, key=lambda x: x['anzahlPlaetze'])
+
+    # filters out any entry that is below the user request anzahlPlaetze
+    sorted_filtered_list = [entry for entry in sorted_table_by_anzahlplaetze if entry['anzahlPlaetze'] >= int(anzahl_plaetze)]
+
+    if not sorted_filtered_list:
+        return jsonify({'error': 'Conflict: There are free tables but not enough anzahlPlaetze'}), 409
+
+    # ---------------------------
+    # book the first table from the result list / just saving for the post thingy
+    first_row = sorted_filtered_list[0]
+    booking_params = {'zeitpunkt': zeitpunkt, 'tischnummer': first_row['tischnummer'], 'pin': random.randint(1000, 9999)}
+
+    booking_query = '''INSERT INTO reservierungen (zeitpunkt, tischnummer, pin, storniert)
+                       VALUES (:zeitpunkt, :tischnummer, :pin, 'False');'''
+
+    obj = cur.execute(booking_query, booking_params)
+    conn.commit()
+
+    print("Filtered list:")
+    print(sorted_filtered_list)
+
+    return jsonify(sorted_filtered_list[0])
 
 
 @app.route('/api/tische/', methods=['GET'])
