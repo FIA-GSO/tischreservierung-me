@@ -4,6 +4,7 @@ from flask import jsonify   # übersetzt python-dicts in json
 import sqlite3
 import random
 import string
+from datetime import datetime
 import urllib.parse
 
 app = flask.Flask(__name__)
@@ -38,7 +39,9 @@ def api_res():
 
 @app.route('/api/res/create', methods=['GET'])
 def api_res_create():
-    # example url: 127.0.0.1:5000/api/tische/free?zeitpunkt=2022-02-02%2018:30:00
+
+
+    # example url: http://127.0.0.1:5000/api/res/create?zeitpunkt=2022-02-02%2018:30:00&anzahlPlaetze=6
     # %20 for space
 
     query_parameters = request.args
@@ -51,28 +54,35 @@ def api_res_create():
     zeitpunkt = query_parameters.get('zeitpunkt')
     anzahlPlaetze = query_parameters.get('anzahlPlaetze')
 
-    if query_parameters.keys() != {'zeitpunkt'}:
-        return jsonify({'error': 'Bad Request: Zeitpunkt parameter is the onyl parameter allowed'}), 400
+    if query_parameters.keys() != {'zeitpunkt', 'anzahlPlaetze'}:
+        return jsonify({'error': 'Bad Request: Zeitpunkt and anzahlPlaetze are the only parameters allowed'}), 400
+
+    if not datetime_valid(zeitpunkt):
+        return jsonify({'error': 'Bad Request: Zeitpunkt parameter does not fullfill iso standart date'}), 400
 
     free = '''SELECT t.tischnummer, t.anzahlPlaetze
-               FROM tische t LEFT JOIN reservierungen r
-               ON t.tischnummer = r.tischnummer
-               AND r.zeitpunkt = :zeitpunkt
-               AND r.storniert = "False"
-               WHERE r.tischnummer IS NULL;'''
+                   FROM tische t LEFT JOIN reservierungen r
+                   ON t.tischnummer = r.tischnummer
+                   AND r.zeitpunkt = :zeitpunkt
+                   AND r.storniert = "False"
+                   WHERE r.tischnummer IS NULL;'''
 
     params = {'zeitpunkt': zeitpunkt, 'anzahlPlaetze': anzahlPlaetze}
 
-    free_tables = cur.execute(free, params).fetchone()
+    free_tables = cur.execute(free, params).fetchall()
 
-    if free_tables:
-        x = free_tables['tischnummer']
-        y = free_tables['anzahlPlaetze']
-        print(x,y)
-    else:
+    if not free_tables:
         return jsonify({'error': 'Conflict: There are no free tables at the selected time'}), 409
 
-    return jsonify(free_tables)
+    sorted_tables_by_anzahlplaetze = sorted(free_tables, key=lambda x: x['anzahlPlaetze'])
+    filtered_list = [entry for entry in sorted_tables_by_anzahlplaetze if entry['anzahlPlaetze'] >= int(anzahlPlaetze)]
+    if filtered_list:
+        print("Filtered list:")
+        print(filtered_list)
+        return (jsonify(filtered_list))
+    else:
+        return jsonify({'error': 'Conflict: There are free tables but not enough places'}), 409
+
 
 
 @app.route('/api/tische/', methods=['GET'])
@@ -99,9 +109,11 @@ def api_free_tables():
 
     zeitpunkt = query_parameters.get('zeitpunkt')
 
-
     if query_parameters.keys() != {'zeitpunkt'}:
         return jsonify({'error': 'Bad Request: Zeitpunkt parameter is the onyl parameter allowed'}), 400
+
+    if not datetime_valid(zeitpunkt):
+        return jsonify({'error': 'Bad Request: Zeitpunkt parameter does not fullfill iso standart date'}), 400
 
     query = '''SELECT t.tischnummer, t.anzahlPlaetze
                FROM tische t LEFT JOIN reservierungen r
@@ -144,6 +156,14 @@ def api_free_tables_multi_params():
 @app.errorhandler(404)
 def page_not_found(e):
     return "<h1>404</h1><p>The resource could not be found.</p>", 404
+
+
+def datetime_valid(dt_str):
+    try:
+        datetime.fromisoformat(dt_str)
+    except:
+        return False
+    return True
 
 
 app.run()
