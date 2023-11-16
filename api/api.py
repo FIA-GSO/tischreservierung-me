@@ -57,6 +57,9 @@ def api_res_create():
     if not datetime_valid(zeitpunkt):
         return jsonify({'error': 'Bad Request: Zeitpunkt parameter does not fullfill iso standart date'}), 400
 
+    if not datetime_time_validate(zeitpunkt):
+        return jsonify({'error': 'Bad Request: Zeitpunkt parameter has to be at full or half hour values'}), 400
+
     # ---------------------------
     # check free tables at selected date
 
@@ -75,8 +78,7 @@ def api_res_create():
         return jsonify({'error': 'Conflict: There are no free tables at the selected time'}), 409
 
     # ---------------------------
-
-    # sorts asc b anzahlPlaetze
+    # sort and filter the table
     sorted_table_by_anzahlplaetze = sorted(free_tables, key=lambda x: x['anzahlPlaetze'])
 
     # filters out any entry that is below the user request anzahlPlaetze
@@ -86,7 +88,7 @@ def api_res_create():
         return jsonify({'error': 'Conflict: There are free tables but not enough anzahlPlaetze'}), 409
 
     # ---------------------------
-    # book the first table from the result list / just saving for the post thingy
+    # book the first table from the result list
     first_row = sorted_filtered_list[0]
     booking_params = {'zeitpunkt': zeitpunkt, 'tischnummer': first_row['tischnummer'], 'pin': random.randint(1000, 9999)}
 
@@ -95,9 +97,6 @@ def api_res_create():
 
     obj = cur.execute(booking_query, booking_params)
     conn.commit()
-
-    print("Filtered list:")
-    print(sorted_filtered_list)
 
     return jsonify(sorted_filtered_list[0])
 
@@ -144,32 +143,6 @@ def api_free_tables():
     return jsonify(free_tables)
 
 
-# example of how to include multiple params that don't have to be in a specific order
-@app.route('/api/tische/free/UNKNOWN', methods=['GET'])
-def api_free_tables_multi_params():
-
-    query_parameters = request.args
-    conn = sqlite3.connect('../buchungssystem.sqlite')
-    conn.row_factory = dict_factory
-    cur = conn.cursor()
-
-    zeitpunkt = query_parameters.get('zeitpunkt')
-    other_param = query_parameters.get('other_param')  # more params can be added here
-
-    query = '''SELECT t.tischnummer, t.anzahlPlaetze
-               FROM tische t LEFT JOIN reservierungen r ON
-               t.tischnummer = r.tischnummer
-               AND r.zeitpunkt = :zeitpunkt
-               AND r.other_param = :other_param
-               AND r.storniert = "False"
-               WHERE r.tischnummer IS NULL;'''
-
-    params = {'zeitpunkt': zeitpunkt, 'other_param': other_param}  # maps request args to their placeholder
-    free_tables = cur.execute(query, params).fetchall()
-
-    return jsonify(free_tables)
-
-
 @app.errorhandler(404)
 def page_not_found(e):
     return "<h1>404</h1><p>The resource could not be found.</p>", 404
@@ -181,6 +154,22 @@ def datetime_valid(dt_str):
     except:
         return False
     return True
+
+
+def datetime_time_validate(zeitpunkt):
+    try:
+        # Parse the input string as a datetime object
+        dt = datetime.strptime(zeitpunkt, '%Y-%m-%d %H:%M:%S')
+
+        # Check if seconds are 0 and minutes are either 0 or 30
+        if dt.second != 0 or dt.minute not in [0, 30]:
+            return False
+
+        return True
+
+    except ValueError:
+        # If parsing fails, it's not a valid datetime format
+        return False
 
 
 app.run()
