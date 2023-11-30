@@ -1,0 +1,207 @@
+
+---
+swagger: "2.0"
+info:
+  description: "api docs for the flask desk booking api"
+  version: "v0.1.0"
+  title: "flask-desk-booking"
+  contact:
+    name: "Tim Hamacher"
+    email: "tim.h52@gso.schule.koeln"
+
+schemes:
+  - "http"
+paths:
+
+  /api/tische:
+    get:
+      tags:
+        - "Tische"
+      summary: "Returns all tables"
+      description: ""
+      operationId: "tables_get"
+      produces:
+        - application/json
+      responses:
+        200:
+          description: "endpoint to list of tables"
+          schema:
+            $ref: "#/definitions/GetTischeDataDefinition"
+        400:
+          description: "request failed"
+          schema:
+            $ref: "#/definitions/RequestErrorDefinition"
+  
+  /api/tische/free:
+    get:
+      tags:
+        - "Tische"
+      summary: "Returns all free tables"
+      description: ""
+      operationId: "tables_free_get"
+      parameters:
+        - in: query
+          name: zeitpunkt
+          type: "string"
+          format: "date"
+          description: The number of items to skip before starting to collect the result set
+      produces:
+        - application/json
+      responses:
+        200:
+          description: "endpoint to list of free tables"
+          schema:
+            $ref: "#/definitions/GetTischeDataDefinition"
+        400:
+          description: "request failed"
+          schema:
+            $ref: "#/definitions/RequestErrorDefinition"
+            
+  
+  /api/res:
+    get:
+      tags:
+        - "reserve"
+      summary: "Returns all current reservations"
+      description: ""
+      operationId: "reserve_get"
+      produces:
+        - application/json
+      responses:
+        200:
+          description: "endpoint to list reservations"
+          schema:
+            $ref: "#/definitions/GetReservationDataDefinition"
+        400:
+          description: "request failed"
+          schema:
+            $ref: "#/definitions/RequestErrorDefinition"
+
+  /api/res/create:
+    post:
+      tags:
+        - "reserve"
+      summary: "endpoint to handle new reservation"
+      operationId: "reserve_post"
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: "body"
+          name: "body"
+          description: ""
+          required: true
+          schema:
+            $ref: "#/definitions/CreateReservationDataDefinition"
+
+      responses:
+        200:
+          description: "request made"
+          schema:
+            $ref: "#/definitions/CreateReservationResponseSuccessDefinition"
+        400:
+          description: "request failed"
+          schema:
+            $ref: "#/definitions/RequestErrorDefinition"
+
+definitions:
+
+  # Request
+  CreateReservationDefinition:
+    type: "object"
+    $ref: "#/definitions/CreateReservationDataDefinition"
+
+  CreateReservationResponseSuccessDefinition:
+    type: "object"
+    $ref: "#/definitions/CreateReservationDataDefinition"
+
+
+  RequestErrorDefinition:
+    type: "object"
+    required:
+      - "code"
+      - "message"
+    properties:
+      code:
+        x-order: 1
+        description: "This is my error code"
+        type: "integer"
+      message:
+        x-order: 2
+        type: "string"
+
+  CreateReservationDataDefinition:
+    type: "object"
+    required:
+      - "zeitpunkt"
+      - "anzahl_plaetze"
+    properties:
+      zeitpunkt:
+        x-order: 1
+        $ref: "#/definitions/zeitpunkt"
+      anzahl_plaetze:
+        x-order: 2
+        $ref: "#/definitions/anzahl_plaetze"
+        
+  GetTischeDataDefinition:
+    type: "object"
+    required:
+      - "anzahl_plaetze"
+      - "tischnummer"
+    properties:
+      anzahl_plaetze:
+        x-order: 1
+        $ref: "#/definitions/anzahl_plaetze"
+      tischnummer:
+        x-order: 2
+        $ref: "#/definitions/tischnummer"
+        
+  GetReservationDataDefinition:
+    type: "object"
+    required:
+      - "anzahl_plaetze"
+      - "tischnummer"
+      - "pin"
+      - "reservierungsnummer"
+      - "storniert"
+    properties:
+      anzahl_plaetze:
+        x-order: 1
+        $ref: "#/definitions/anzahl_plaetze"
+      tischnummer:
+        x-order: 2
+        $ref: "#/definitions/tischnummer"
+      pin:
+        x-order: 3
+        $ref: "#/definitions/pin"
+      reservierungsnummer:
+        x-order: 3
+        $ref: "#/definitions/reservierungsnummer"
+      storniert:
+        x-order: 3
+        $ref: "#/definitions/storniert"
+
+  anzahl_plaetze:
+    type: "integer"
+    minimum: 0
+
+  zeitpunkt:
+    type: "string"
+    format: "date"
+    example: 2022-02-02 18:30:00
+  
+  tischnummer:
+    type: "integer"
+    minimum: 0
+    
+  pin:
+    type: "integer"
+    minimum: 0
+    
+  reservierungsnummer:
+    type: "integer"
+    minimum: 0
+    
+  storniert:
+    type: "boolean"
