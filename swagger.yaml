@@ -44,7 +44,7 @@ paths:
           name: zeitpunkt
           type: "string"
           format: "date"
-          description: The number of items to skip before starting to collect the result set
+          description: ""
       produces:
         - application/json
       responses:
@@ -61,7 +61,7 @@ paths:
   /api/res:
     get:
       tags:
-        - "reserve"
+        - "Reservierung"
       summary: "Returns all current reservations"
       description: ""
       operationId: "reserve_get"
@@ -80,7 +80,7 @@ paths:
   /api/res/create:
     post:
       tags:
-        - "reserve"
+        - "Reservierung"
       summary: "endpoint to handle new reservation"
       operationId: "reserve_post"
       consumes:
@@ -100,6 +100,32 @@ paths:
           description: "request made"
           schema:
             $ref: "#/definitions/CreateReservationResponseSuccessDefinition"
+        400:
+          description: "request failed"
+          schema:
+            $ref: "#/definitions/RequestErrorDefinition"
+
+  /api/res/delete:
+    delete:
+      tags:
+        - "Reservierung"
+      summary: "Deletes reservation by tischnummer and pin"
+      description: ""
+      operationId: "reserve_delete"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: ""
+          required: true
+          schema:
+            $ref: "#/definitions/DeleteReservationDataDefinition"
+      produces:
+        - application/json
+      responses:
+        200:
+          description: "endpoint to list of free tables"
+          schema:
+            $ref: "#/definitions/DeleteReservationDataDefinition"
         400:
           description: "request failed"
           schema:
@@ -143,6 +169,19 @@ definitions:
       anzahl_plaetze:
         x-order: 2
         $ref: "#/definitions/anzahl_plaetze"
+        
+  DeleteReservationDataDefinition:
+    type: "object"
+    required:
+      - "zeitpunkt"
+      - "anzahl_plaetze"
+    properties:
+      tischnummer:
+        x-order: 1
+        $ref: "#/definitions/tischnummer"
+      pin:
+        x-order: 2
+        $ref: "#/definitions/pin"
         
   GetTischeDataDefinition:
     type: "object"
