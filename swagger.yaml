@@ -1,4 +1,3 @@
-
 ---
 swagger: "2.0"
 info:
@@ -12,7 +11,6 @@ info:
 schemes:
   - "http"
 paths:
-
   /api/tische:
     get:
       tags:
@@ -31,7 +29,7 @@ paths:
           description: "request failed"
           schema:
             $ref: "#/definitions/RequestErrorDefinition"
-  
+
   /api/tische/free:
     get:
       tags:
@@ -56,8 +54,7 @@ paths:
           description: "request failed"
           schema:
             $ref: "#/definitions/RequestErrorDefinition"
-            
-  
+
   /api/res:
     get:
       tags:
@@ -105,34 +102,33 @@ paths:
           schema:
             $ref: "#/definitions/RequestErrorDefinition"
 
-  /api/res/delete:
-    delete:
+  /api/res/cancel:
+    patch:
       tags:
         - "Reservierung"
-      summary: "Deletes reservation by tischnummer and pin"
+      summary: "Updates reservation by tischnummer, pin and reservierungsnummer to storniert=true"
       description: ""
-      operationId: "reserve_delete"
+      operationId: "reserve_cancel"
       parameters:
         - in: "body"
           name: "body"
           description: ""
           required: true
           schema:
-            $ref: "#/definitions/DeleteReservationDataDefinition"
+            $ref: "#/definitions/CancelReservationDataDefinition"
       produces:
         - application/json
       responses:
         200:
           description: "endpoint to list of free tables"
           schema:
-            $ref: "#/definitions/DeleteReservationDataDefinition"
+            $ref: "#/definitions/CancelReservationDataDefinition"
         400:
           description: "request failed"
           schema:
             $ref: "#/definitions/RequestErrorDefinition"
 
 definitions:
-
   # Request
   CreateReservationDefinition:
     type: "object"
@@ -141,7 +137,6 @@ definitions:
   CreateReservationResponseSuccessDefinition:
     type: "object"
     $ref: "#/definitions/CreateReservationDataDefinition"
-
 
   RequestErrorDefinition:
     type: "object"
@@ -169,12 +164,13 @@ definitions:
       anzahl_plaetze:
         x-order: 2
         $ref: "#/definitions/anzahl_plaetze"
-        
-  DeleteReservationDataDefinition:
+
+  CancelReservationDataDefinition:
     type: "object"
     required:
-      - "zeitpunkt"
-      - "anzahl_plaetze"
+      - "tischnummer"
+      - "pin"
+      - "reservierungsnummer"
     properties:
       tischnummer:
         x-order: 1
@@ -182,7 +178,10 @@ definitions:
       pin:
         x-order: 2
         $ref: "#/definitions/pin"
-        
+      reservierungsnummer:
+        x-order: 3
+        $ref: "#/definitions/reservierungsnummer"
+
   GetTischeDataDefinition:
     type: "object"
     required:
@@ -195,7 +194,7 @@ definitions:
       tischnummer:
         x-order: 2
         $ref: "#/definitions/tischnummer"
-        
+
   GetReservationDataDefinition:
     type: "object"
     required:
@@ -229,18 +228,18 @@ definitions:
     type: "string"
     format: "date"
     example: 2022-02-02 18:30:00
-  
+
   tischnummer:
     type: "integer"
     minimum: 0
-    
+
   pin:
     type: "integer"
     minimum: 0
-    
+
   reservierungsnummer:
     type: "integer"
     minimum: 0
-    
+
   storniert:
     type: "boolean"
