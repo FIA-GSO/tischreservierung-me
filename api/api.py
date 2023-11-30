@@ -36,6 +36,38 @@ def api_res():
 
     return jsonify(all_books)
 
+@app.route('/api/res/cancel', methods=['PATCH'])
+def api_res_delete():
+    # example PATCH JSON:
+    # {
+    #   "pin": 7948,
+    #   "reservierungsnummer": 16,
+    #   "tischnummer": 4
+    # }
+    conn = sqlite3.connect('../buchungssystem.sqlite')
+    conn.row_factory = dict_factory
+    cur = conn.cursor()
+
+    jsonData = request.json
+
+    print(jsonData)
+
+    tischnummer = jsonData.get('tischnummer')
+    pin = jsonData.get('pin')
+    reservierungsnummer = jsonData.get('reservierungsnummer')
+
+    if jsonData.keys() != {'tischnummer', 'reservierungsnummer', 'pin'}:
+        return jsonify({'error': 'Bad Request: reservierungsnummer, pin and tischnummer are required the only parameters allowed'}), 400
+
+    delete_query = '''UPDATE reservierungen
+                      SET storniert = 'True'
+                      WHERE tischnummer = :tischnummer AND pin = :pin AND reservierungsnummer = :reservierungsnummer;'''
+
+    params = {'tischnummer': tischnummer, 'pin': pin, 'reservierungsnummer': reservierungsnummer}
+    result = cur.execute(delete_query, params)
+    conn.commit()
+    return jsonify(jsonData)
+
 
 @app.route('/api/res/create', methods=['POST'])
 def api_res_create():
